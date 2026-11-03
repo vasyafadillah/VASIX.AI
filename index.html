@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VASIX.AI</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="theme-color" content="#0058fe">
+<style>
+  /* Layout: satu kolom chat penuh layar, input menempel di bawah */
+  :root {
+    /* Palet dari logo VASIX.AI: navy #01143a dan biru #0058fe */
+    --bg: #f0f4fc; --surface: #ffffff; --fg: #01143a; --muted: #5a6a8a; --line: #d3ddef;
+    --accent: #0058fe; --accent-fg: #ffffff; --accent-ink: #0058fe; --accent-soft: #e1ebff;
+    --user-bg: #0058fe; --user-fg: #ffffff;
+    --danger: #b3261e;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #020c22; --surface: #07173a; --fg: #e8eefc; --muted: #8fa3cc; --line: #17305f;
+      --accent: #0058fe; --accent-fg: #ffffff; --accent-ink: #78a8ff; --accent-soft: #0c2457;
+      --user-bg: #0058fe; --user-fg: #ffffff; --danger: #ff8a80; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #020c22; --surface: #07173a; --fg: #e8eefc; --muted: #8fa3cc; --line: #17305f;
+    --accent: #0058fe; --accent-fg: #ffffff; --accent-ink: #78a8ff; --accent-soft: #0c2457;
+    --user-bg: #0058fe; --user-fg: #ffffff; --danger: #ff8a80; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.5;
+    display: flex; flex-direction: column;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+  }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  header { padding: 14px 0 10px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { margin: 0; line-height: 0; }
+  .logo { height: 26px; width: auto; max-width: 60vw; display: block; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  button, textarea, input { font: inherit; color: inherit; }
+  button { white-space: nowrap; cursor: pointer; border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 8px; }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #chat { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 0; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 88%; padding: 10px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+  .msg.user { align-self: flex-end; background: var(--user-bg); color: var(--user-fg); border-bottom-right-radius: 4px; }
+  .msg.ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(0,0,0,.04); border-bottom-left-radius: 4px; }
+  .msg.note { align-self: center; color: var(--muted); font-size: .85rem; max-width: 100%; text-align: center; }
+  .msg.err { align-self: center; color: var(--danger); font-size: .9rem; max-width: 100%; text-align: center; }
+  form { display: flex; gap: 8px; align-items: flex-end; padding: 8px 0 12px; }
+  textarea { flex: 1; min-width: 0; resize: none; max-height: 140px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+  textarea:focus { border-color: var(--accent); }
+  .iconbtn { padding: 0; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; flex: none; color: var(--accent-ink); }
+  .iconbtn svg { width: 22px; height: 22px; }
+  #previews { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px 0 0; }
+  #previews[hidden] { display: none; }
+  .thumb { position: relative; width: 64px; height: 64px; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
+  .thumb button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; padding: 0; border-radius: 50%; line-height: 1; font-size: 14px; background: var(--fg); color: var(--bg); border: none; }
+  .msg .pics { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .msg .pics img { max-width: 100%; max-height: 220px; border-radius: 10px; display: block; object-fit: cover; }
+  .msg .pics:last-child { margin-bottom: 0; }
+  body.drag #chat { outline: 2px dashed var(--accent); outline-offset: -6px; }
+  dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); max-width: 360px; width: calc(100% - 32px); }
+  dialog input { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); margin: 10px 0; }
+  .tiny { font-size: .75rem; color: var(--muted); padding-bottom: 8px; }
+
+  /* ===== Efek tampilan ===== */
+  /* Cahaya biru yang pelan bergerak di belakang chat (efek utama) */
+  body::before {
+    content: ""; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(40% 35% at 18% 14%, rgba(0,88,254,.30), transparent 70%),
+      radial-gradient(34% 30% at 86% 24%, rgba(90,170,255,.24), transparent 70%),
+      radial-gradient(46% 36% at 62% 96%, rgba(0,88,254,.20), transparent 70%);
+    filter: blur(28px);
+    animation: drift 24s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(-3%, -2%, 0) scale(1); }
+    to   { transform: translate3d(3%, 3%, 0) scale(1.12); }
+  }
+  /* Header kaca buram */
+  header {
+    position: relative; z-index: 2;
+    background: color-mix(in srgb, var(--surface) 62%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4);
+    padding-inline: 14px; margin-top: 8px; border: 1px solid var(--line); border-radius: 16px;
+    box-shadow: 0 6px 24px -12px rgba(0,88,254,.35);
+  }
+  /* Pesan muncul pelan saat dikirim / diterima */
+  .msg { animation: pop .32s cubic-bezier(.2,.9,.3,1.2) both; }
+  .msg.user { transform-origin: bottom right; background: linear-gradient(135deg, #0058fe, #2f7bff); box-shadow: 0 8px 20px -10px rgba(0,88,254,.7); }
+  .msg.ai { transform-origin: bottom left; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: color-mix(in srgb, var(--surface) 82%, transparent); }
+  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+  /* Titik mengetik saat AI sedang menjawab */
+  .msg.typing { display: flex; gap: 5px; align-items: center; padding: 14px 16px; }
+  .msg.typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-ink); opacity: .35; animation: dot 1.1s ease-in-out infinite; }
+  .msg.typing i:nth-child(2) { animation-delay: .15s; }
+  .msg.typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dot { 0%, 80%, 100% { transform: translateY(0); opacity: .35; } 40% { transform: translateY(-5px); opacity: 1; } }
+  /* Sapaan awal */
+  .msg.note { font-size: 1rem; margin: auto 0; animation: welcome .9s ease-out both; }
+  @keyframes welcome { from { opacity: 0; transform: translateY(14px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+  /* Tombol dan kolom ketik merespons sentuhan */
+  button { transition: transform .15s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease; }
+  button:not(:disabled):hover { transform: translateY(-1px); }
+  button:not(:disabled):active { transform: scale(.95); }
+  button.primary { background: linear-gradient(135deg, #0058fe, #3d86ff); box-shadow: 0 6px 18px -6px rgba(0,88,254,.8); }
+  button.primary:not(:disabled):hover { box-shadow: 0 8px 26px -4px rgba(0,88,254,.95); }
+  .iconbtn:not(:disabled):hover { background: var(--accent-soft); border-color: var(--accent); }
+  textarea { transition: border-color .2s ease, box-shadow .25s ease; }
+  textarea:focus { outline: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent), 0 8px 24px -10px rgba(0,88,254,.6); }
+  .thumb { animation: pop .25s ease-out both; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="logo-dark.png">
+        <img class="logo" src="logo.png" alt="VASIX.AI" width="900" height="105">
+      </picture>
+    </h1>
+    <div style="display:flex;gap:6px">
+      <button id="pw" type="button" hidden>Sandi</button>
+      <button id="clear" type="button">Obrolan baru</button>
+    </div>
+  </header>
+
+  <main id="chat" aria-live="polite"></main>
+
+
+  <div id="previews" hidden></div>
+  <form id="form">
+    <button id="attach" class="iconbtn" type="button" aria-label="Unggah foto" title="Unggah foto">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8.5 5l1.2-2h4.6l1.2 2"/></svg>
+    </button>
+    <input id="file" type="file" accept="image/*" multiple hidden>
+    <textarea id="input" rows="1" placeholder="Tanya atau kirim foto..." aria-label="Pesan"></textarea>
+    <button id="send" class="primary" type="submit">Kirim</button>
+    <button id="stop" type="button" hidden>Stop</button>
+  </form>
+  <div class="tiny">AI bisa keliru. Cek lagi hal penting seperti kesehatan, hukum, dan keuangan.</div>
+</div>
+
+<dialog id="pwdlg">
+  <form method="dialog" id="pwform">
+    <strong>Sandi akses</strong>
+    <input id="pwinput" type="password" autocomplete="current-password" placeholder="Masukkan sandi">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button value="cancel" type="button" id="pwcancel">Batal</button>
+      <button class="primary" value="ok">Simpan</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  const API_URL = "/api/chat";
+  const $ = (id) => document.getElementById(id);
+  const chat = $("chat"), input = $("input"), sendBtn = $("send"), stopBtn = $("stop");
+
+  function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+  let history = load("chat", []);
+  let password = load("pw", "");
+  let busy = false, controller = null;
+  let pending = [];                       // foto yang sudah dipilih tapi belum dikirim
+  const MAX_PICS = 3, MAX_TOTAL_CHARS = 3_500_000;
+
+  function addMsg(role, text, images) {
+    const el = document.createElement("div");
+    el.className = "msg " + role;
+    if (images && images.length) {
+      const pics = document.createElement("div");
+      pics.className = "pics";
+      images.forEach((src) => { const im = document.createElement("img"); im.src = src; im.alt = "Foto terkirim"; pics.appendChild(im); });
+      el.appendChild(pics);
+      if (text) el.appendChild(document.createTextNode(text));
+    } else {
+      el.textContent = text;
+    }
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+  function render() {
+    chat.innerHTML = "";
+    if (!history.length) addMsg("note", "Halo, aku VASIX.AI. Tanya apa saja: tugas, tulisan, terjemahan, ide, atau hal sehari-hari.");
+    history.forEach((m) => {
+      const label = !m.images && m.imageCount ? "[" + m.imageCount + " foto]" + (m.content ? "\n" : "") : "";
+      addMsg(m.role === "user" ? "user" : "ai", label + m.content, m.images);
+    });
+  }
+  render();
+
+  async function send(textOverride) {
+    const text = (textOverride ?? input.value).trim();
+    const pics = textOverride ? [] : pending;
+    if ((!text && !pics.length) || busy) return;
+    busy = true; controller = new AbortController();
+    input.value = ""; input.style.height = "auto";
+    if (!textOverride) { pending = []; renderPreviews(); }
+    sendBtn.disabled = true; stopBtn.hidden = false;
+    history.push(pics.length ? { role: "user", content: text, images: pics } : { role: "user", content: text });
+    if (history.length === 1) chat.innerHTML = "";
+    addMsg("user", text, pics);
+    const out = addMsg("ai", "");
+    out.classList.add("typing"); out.innerHTML = "<i></i><i></i><i></i>";
+    let reply = "";
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-app-password": password },
+        body: JSON.stringify({ messages: history }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        let msg = "Terjadi kesalahan (" + res.status + ").";
+        try { msg = (await res.json()).error || msg; } catch {}
+        if (res.status === 401) { $("pw").hidden = false; msg += " Tekan tombol Sandi untuk mengisi."; }
+        out.remove(); history.pop(); pending = pics; renderPreviews(); addMsg("err", msg);
+        return;
+      }
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (!data || data === "[DONE]") continue;
+          try {
+            reply += JSON.parse(data).choices?.[0]?.delta?.content || "";
+            if (reply) { out.classList.remove("typing"); out.textContent = reply; }
+            chat.scrollTop = chat.scrollHeight;
+          } catch {}
+        }
+      }
+      if (reply) history.push({ role: "assistant", content: reply });
+      else { out.remove(); history.pop(); pending = pics; renderPreviews(); addMsg("err", "Jawaban kosong. Coba kirim lagi."); }
+    } catch (e) {
+      if (e.name === "AbortError") {
+        if (reply) history.push({ role: "assistant", content: reply });
+        else { out.remove(); history.pop(); }
+      } else {
+        out.remove(); history.pop(); pending = pics; renderPreviews();
+        addMsg("err", "Tidak bisa terhubung ke server. Cek koneksi internet.");
+      }
+    } finally {
+      busy = false; controller = null; sendBtn.disabled = false; stopBtn.hidden = true;
+      save("chat", history.slice(-40).map((m) => ({ role: m.role, content: m.content, imageCount: m.images ? m.images.length : (m.imageCount || 0) })));
+      input.focus();
+    }
+  }
+
+  $("form").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
+  });
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 140) + "px";
+  });
+  stopBtn.addEventListener("click", () => controller && controller.abort());
+  $("clear").addEventListener("click", () => {
+    if (busy) return;
+    history = []; save("chat", history); render();
+  });
+
+  // Upload foto
+  const fileInput = $("file");
+  function renderPreviews() {
+    const box = $("previews");
+    box.innerHTML = "";
+    box.hidden = !pending.length;
+    pending.forEach((src, i) => {
+      const t = document.createElement("div"); t.className = "thumb";
+      const im = document.createElement("img"); im.src = src; im.alt = "Foto " + (i + 1);
+      const x = document.createElement("button"); x.type = "button"; x.textContent = "\u00d7"; x.setAttribute("aria-label", "Hapus foto");
+      x.addEventListener("click", () => { pending.splice(i, 1); renderPreviews(); });
+      t.append(im, x); box.appendChild(t);
+    });
+  }
+  // Perkecil + kompres di browser supaya upload cepat dan hemat kuota/biaya
+  async function compress(file, maxSide = 1280, quality = 0.82) {
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+    catch {
+      bmp = await new Promise((ok, no) => {
+        const im = new Image(), url = URL.createObjectURL(file);
+        im.onload = () => { URL.revokeObjectURL(url); ok(im); };
+        im.onerror = () => { URL.revokeObjectURL(url); no(new Error("gagal baca gambar")); };
+        im.src = url;
+      });
+    }
+    const w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+    const k = Math.min(1, maxSide / Math.max(w0, h0));
+    const c = document.createElement("canvas");
+    c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);   // PNG transparan jadi latar putih
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", quality);
+  }
+  async function addFiles(files) {
+    const imgs = [...files].filter((f) => f.type.startsWith("image/"));
+    if (!imgs.length) return;
+    for (const f of imgs) {
+      if (pending.length >= MAX_PICS) { addMsg("err", "Maksimal " + MAX_PICS + " foto per pesan."); break; }
+      try {
+        const d = await compress(f);
+        if (pending.reduce((n, p) => n + p.length, d.length) > MAX_TOTAL_CHARS) { addMsg("err", "Total ukuran foto terlalu besar."); break; }
+        pending.push(d);
+      } catch { addMsg("err", "Foto tidak bisa dibaca. Coba format JPG/PNG."); }
+    }
+    renderPreviews();
+  }
+  $("attach").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async () => { await addFiles(fileInput.files); fileInput.value = ""; });
+  input.addEventListener("paste", (e) => {
+    const fs = [...(e.clipboardData?.files || [])];
+    if (fs.some((f) => f.type.startsWith("image/"))) { e.preventDefault(); addFiles(fs); }
+  });
+  addEventListener("dragover", (e) => { e.preventDefault(); document.body.classList.add("drag"); });
+  addEventListener("dragleave", (e) => { if (!e.relatedTarget) document.body.classList.remove("drag"); });
+  addEventListener("drop", (e) => { e.preventDefault(); document.body.classList.remove("drag"); addFiles(e.dataTransfer.files); });
+
+  // Sandi akses
+  const dlg = $("pwdlg");
+  if (password) $("pw").hidden = false;
+  $("pw").addEventListener("click", () => { $("pwinput").value = password; dlg.showModal(); });
+  $("pwcancel").addEventListener("click", () => dlg.close());
+  $("pwform").addEventListener("submit", () => { password = $("pwinput").value; save("pw", password); });
+</script>
+</body>
+</html>
